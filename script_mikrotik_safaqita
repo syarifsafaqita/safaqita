@@ -41,3 +41,14 @@ add comment=fitur interval=1d name="\$_auto_remove_report" on-event=":local date
     \n/sys scr rem [find where owner=\$monthdell];\r\
     \n}\r\
     \n}" policy=ftp,reboot,read,write,policy,test,password,sniff,sensitive,romon start-date=feb/07/2024 start-time=02:00:00
+
+# AUTO DISABLE USER YANG SHARE / REPEATER / LIMITING ADDRESS PER MAC
+/system scheduler
+add comment=fitur interval=2m name="\$_limiting_address" on-event=":local loglist [:toarray [/log find  time>([/system clock get time] - 1m) message~\"limiting addresses per mac\"]];\r\
+    \n:foreach i in=\$loglist do={\r\
+    \n:local logMessage [/log get \$i message];\r\
+    \n:local voucher [:pick \$logMessage ([:find \$logMessage \"->:\"]+4) [:find \$logMessage \" (\"]];\r\
+    \n:log warning \"User Shared Nakal: \$voucher\";\r\
+    \n/ip hotspot user disable \$voucher\r\
+    \n/ip hotspot active remove [find user=\$voucher]\r\
+    \n}" policy=ftp,reboot,read,write,policy,test,password,sniff,sensitive,romon start-date=mar/06/2024 start-time=00:00:00
