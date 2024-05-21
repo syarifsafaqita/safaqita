@@ -1,0 +1,43 @@
+# PENGATURAN JAM MIKROTIK (x86).
+/system ntp client
+set enabled=yes primary-ntp=114.30.89.30 secondary-ntp=103.177.8.230 server-dns-names=0.id.pool.ntp.org,1.id.pool.ntp.org
+
+# PENGATURAN JAM MIKROTIK x86 SUPAYA JAM KEMBALI ASAL DAN TIDAK BALIK KE 1970 SAAT RESTART
+/system scheduler
+add comment="Do not remove!!! SAFAQITA Expire Monitor" name=Reset-Expire-Monitor on-event=\
+    ":global expireMonitor; :global expireMonitorStart; /sys scr env set value=0 [find name=expireMonitor]; /sys scr env set value=0 [find name=expireMonitorStart];" policy=reboot,read,write,policy,test,password,sniff,sensitive start-time=startup
+add comment=fitur name="\$_datetime_startup" on-event=":local waktu [/system clock manual get dst-start];\r\
+    \n:local date [:pick \$waktu 0 11];\r\
+    \n:local time [:pick \$waktu 12 20];\r\
+    \n/sys clock set date=\$date time=\$time" policy=ftp,reboot,read,write,policy,test,password,sniff,sensitive,romon start-time=startup
+add comment=fitur interval=5m name="\$_datetime_update" on-event=":local date [/sys clock get date];\r\
+    \n:local time [/sys clock get time];\r\
+    \n:local blntgl [:pick \$date 0 10];\r\
+    \n:local cektahun [:pick \$date 10 11];\r\
+    \n:local thn ([\$cektahun]+1);\r\
+    \n/system clock manual set dst-start=\"\$date \$time\" dst-end=\"\$blntgl\$thn \$time\"" policy=ftp,reboot,read,write,policy,test,password,sniff,sensitive,romon start-date=feb/07/2024 start-time=00:00:00
+
+# AUTO REMOVE REPORT SEBELUM 3 BULAN TERKHIR (MIKHMON) REPORT TERSIMPAN HANYA 3 BULAN TERAKHIR
+/system scheduler
+add comment=fitur interval=1d name="\$_auto_remove_report" on-event=":local date [ /system clock get date ];\r\
+    \n:local montharrayA ( \"jan\",\"feb\",\"mar\",\"apr\",\"may\",\"jun\",\"jul\",\"aug\",\"sep\",\"oct\",\"nov\",\"dec\" );\r\
+    \n:local montharrayB (\"oct\",\"nov\",\"dec\" );\r\
+    \n:local day [:tonum [:pick \$date 4 6 ]];\r\
+    \n:local month [ :pick \$date 0 3 ];\r\
+    \n:local year [ :pick \$date 7 11 ];\r\
+    \n:local monthint ([ :find \$montharrayA \$month] + 1);\r\
+    \n:local monthlast  ( \$monthint - 3);\r\
+    \n:if (\$day > 9) do={\r\
+    \n:if ( \$monthlast > 0 ) do={\r\
+    \n:local mmm \"\$[:pick \$montharrayA (\$monthlast - 1)]\";\r\
+    \n:local monthdell \"\$mmm\$year\";\r\
+    \n/sys scr rem [find where owner=\$monthdell];\r\
+    \n}\r\
+    \n:if ( \$monthlast < 1) do={\r\
+    \n:local mkey ([\$monthint - \$monthlast ])\r\
+    \n:local mmm \"\$[:pick \$montharrayB (\$mkey - 1)]\";\r\
+    \n:local y  (\$year - 1);\r\
+    \n:local monthdell \"\$mmm\$y\";\r\
+    \n/sys scr rem [find where owner=\$monthdell];\r\
+    \n}\r\
+    \n}" policy=ftp,reboot,read,write,policy,test,password,sniff,sensitive,romon start-date=feb/07/2024 start-time=02:00:00
